@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "akshayTest4",
+    "slug": "akshayTest4",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  },
+  "name": "akshayTest4"
+}
