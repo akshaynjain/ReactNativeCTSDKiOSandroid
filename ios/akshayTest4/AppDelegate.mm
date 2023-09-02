@@ -3,17 +3,66 @@
 #import <React/RCTBundleURLProvider.h>
 #import <React/RCTLinkingManager.h>
 
+//#import "CleverTap.h"
+#import "CleverTapReactManager.h"
+//#import <UserNotifications/UserNotifications.h>
+//#import <CTNotificationService/CTNotificationService.h>
+#import <CleverTapSDK/CleverTapInstanceConfig.h>
+
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-  self.moduleName = @"main";
+  RCTBridge *bridge = [[RCTBridge alloc] initWithDelegate:self launchOptions:launchOptions];
+  RCTRootView *rootView = [[RCTRootView alloc] initWithBridge:bridge
+                                                   moduleName:@"main"
+                                            initialProperties:launchOptions];
+  
+  rootView.backgroundColor = [[UIColor alloc] initWithRed:1.0f green:1.0f blue:1.0f alpha:1];
+  self.window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+  UIViewController *rootViewController = [UIViewController new];
+  rootViewController.view = rootView;
+  self.window.rootViewController = rootViewController;
+  [self.window makeKeyAndVisible];
+  
+  
+  // Add CleverTap Account ID and Account Token in your .plist file)
+  // initialize CleverTap
+//#ifdef DEBUG
+//  [CleverTap setDebugLevel:CleverTapLogDebug];
+//#endif
+  [CleverTap setDebugLevel:CleverTapLogDebug];
+  [CleverTap autoIntegrate];
+  [self registerPush];
+  [[CleverTapReactManager sharedInstance] applicationDidLaunchWithOptions:launchOptions];
+  // Set the URL Delegate
+  [[CleverTap sharedInstance]setUrlDelegate:self];
+//  [[CleverTap sharedInstance]setUrlDelegate:self];
+  
+  UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+     center.delegate = self;
+  
+  return YES;
+}
 
-  // You can add your custom initial props in the dictionary below.
-  // They will be passed down to the ViewController used by React Native.
-  self.initialProps = @{};
-
-  return [super application:application didFinishLaunchingWithOptions:launchOptions];
+- (void)registerPush {
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+  
+  UNNotificationAction *action1 = [UNNotificationAction actionWithIdentifier:@"action_1" title:@"Back" options:UNNotificationActionOptionNone];
+  UNNotificationAction *action2 = [UNNotificationAction actionWithIdentifier:@"action_2" title:@"Next" options:UNNotificationActionOptionNone];
+  UNNotificationAction *action3 = [UNNotificationAction actionWithIdentifier:@"action_3" title:@"View In App" options:UNNotificationActionOptionNone];
+  UNNotificationCategory *cat = [UNNotificationCategory categoryWithIdentifier:@"CTNotification" actions:@[action1, action2, action3] intentIdentifiers:@[] options:UNNotificationCategoryOptionNone];
+  [center setNotificationCategories:[NSSet setWithObjects:cat, nil]];
+  
+      
+     [center requestAuthorizationWithOptions:(UNAuthorizationOptionSound | UNAuthorizationOptionAlert | UNAuthorizationOptionBadge) completionHandler:^(BOOL granted, NSError * _Nullable error){
+          if( !error ){
+              dispatch_async(dispatch_get_main_queue(), ^(void) {
+                  [[UIApplication sharedApplication] registerForRemoteNotifications];
+              });
+          }
+      }];
+  
 }
 
 - (NSURL *)sourceURLForBridge:(RCTBridge *)bridge
@@ -35,33 +84,61 @@
   return true;
 }
 
-// Linking API
-- (BOOL)application:(UIApplication *)application openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
-  return [super application:application openURL:url options:options] || [RCTLinkingManager application:application openURL:url options:options];
-}
-
-// Universal Links
-- (BOOL)application:(UIApplication *)application continueUserActivity:(nonnull NSUserActivity *)userActivity restorationHandler:(nonnull void (^)(NSArray<id<UIUserActivityRestoring>> * _Nullable))restorationHandler {
-  BOOL result = [RCTLinkingManager application:application continueUserActivity:userActivity restorationHandler:restorationHandler];
-  return [super application:application continueUserActivity:userActivity restorationHandler:restorationHandler] || result;
-}
-
-// Explicitly define remote notification delegates to ensure compatibility with some third-party libraries
-- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken
+//Handle Deeplink
+-(BOOL) application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options
 {
-  return [super application:application didRegisterForRemoteNotificationsWithDeviceToken:deviceToken];
+    return [RCTLinkingManager application:app openURL:url options:options];
+    
 }
 
-// Explicitly define remote notification delegates to ensure compatibility with some third-party libraries
-- (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error
-{
-  return [super application:application didFailToRegisterForRemoteNotificationsWithError:error];
+-(BOOL) application:(UIApplication *)application continueUserActivity:(NSUserActivity *)userActivity restorationHandler:(void (^)(NSArray<id<UIUserActivityRestoring>> * _Nullable))restorationHandler{
+  
+  
+  NSLog(@"%@",userActivity.webpageURL);
+  
+  return TRUE;
+  
 }
 
-// Explicitly define remote notification delegates to ensure compatibility with some third-party libraries
-- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
-{
-  return [super application:application didReceiveRemoteNotification:userInfo fetchCompletionHandler:completionHandler];
+-(BOOL)application:(UIApplication *)application willContinueUserActivityWithType:(NSString *)userActivityType{
+  
+  return TRUE;
+}
+
+
+-(void) application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error{
+  NSLog(@"%@: failed to register for remote notifications: %@", self.description, error.localizedDescription);
+}
+
+-(void) application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken{
+  NSLog(@"%@: registered for remote notifications: %@", self.description, deviceToken.description);
+}
+
+-(void) userNotificationCenter:(UNUserNotificationCenter *)center didReceiveNotificationResponse:(UNNotificationResponse *)response withCompletionHandler:(void (^)(void))completionHandler{
+    
+  NSLog(@"%@: did receive notification response: %@", self.description, response.notification.request.content.userInfo);
+  completionHandler();
+}
+
+-(void) userNotificationCenter:(UNUserNotificationCenter *)center willPresentNotification:(UNNotification *)notification withCompletionHandler:(void (^)(UNNotificationPresentationOptions))completionHandler{
+    NSLog(@"%@: will present notification: %@", self.description, notification.request.content.userInfo);
+  [[CleverTap sharedInstance] recordNotificationViewedEventWithData:notification.request.content.userInfo];
+    completionHandler(UNAuthorizationOptionAlert | UNAuthorizationOptionBadge | UNAuthorizationOptionSound);
+}
+
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler{
+    NSLog(@"%@: did receive remote notification completionhandler: %@", self.description, userInfo);
+    completionHandler(UIBackgroundFetchResultNewData);
+}
+
+- (void)pushNotificationTappedWithCustomExtras:(NSDictionary *)customExtras{
+  NSLog(@"pushNotificationTapped: customExtras: ", customExtras);
+}
+
+// CleverTapURLDelegate method
+- (BOOL)shouldHandleCleverTapURL:(NSURL *)url forChannel:(CleverTapChannel)channel {
+    NSLog(@"Handling URL: \(%@) for channel: \(%d)", url, channel);
+    return YES;
 }
 
 @end

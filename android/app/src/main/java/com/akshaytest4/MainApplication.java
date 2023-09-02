@@ -1,9 +1,16 @@
 package com.akshaytest4;
 
+import android.app.Activity;
 import android.app.Application;
 import android.content.res.Configuration;
-import androidx.annotation.NonNull;
+import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.clevertap.android.sdk.ActivityLifecycleCallback;
+import com.clevertap.android.sdk.CleverTapAPI;
+import com.clevertap.android.sdk.interfaces.NotificationHandler;
 import com.facebook.react.PackageList;
 import com.facebook.react.ReactApplication;
 import com.facebook.react.ReactNativeHost;
@@ -11,13 +18,13 @@ import com.facebook.react.ReactPackage;
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint;
 import com.facebook.react.defaults.DefaultReactNativeHost;
 import com.facebook.soloader.SoLoader;
-
+import com.clevertap.android.pushtemplates.PushTemplateNotificationHandler;
 import expo.modules.ApplicationLifecycleDispatcher;
 import expo.modules.ReactNativeHostWrapper;
 
 import java.util.List;
 
-public class MainApplication extends Application implements ReactApplication {
+public class MainApplication extends Application implements ReactApplication, Application.ActivityLifecycleCallbacks {
 
   private final ReactNativeHost mReactNativeHost =
     new ReactNativeHostWrapper(this, new DefaultReactNativeHost(this) {
@@ -58,6 +65,10 @@ public class MainApplication extends Application implements ReactApplication {
 
   @Override
   public void onCreate() {
+      ActivityLifecycleCallback.register(this);
+      CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.DEBUG);
+      CleverTapAPI.setNotificationHandler(new PushTemplateNotificationHandler());
+      registerActivityLifecycleCallbacks(this);
     super.onCreate();
     SoLoader.init(this, /* native exopackage */ false);
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
@@ -73,4 +84,39 @@ public class MainApplication extends Application implements ReactApplication {
     super.onConfigurationChanged(newConfig);
     ApplicationLifecycleDispatcher.onConfigurationChanged(this, newConfig);
   }
+
+    @Override
+    public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) {
+
+    }
+
+    @Override
+    public void onActivityStarted(@NonNull Activity activity) {
+
+    }
+
+    @Override
+    public void onActivityResumed(@NonNull Activity activity) {
+
+    }
+
+    @Override
+    public void onActivityPaused(@NonNull Activity activity) {
+
+    }
+
+    @Override
+    public void onActivityStopped(@NonNull Activity activity) {
+
+    }
+
+    @Override
+    public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {
+
+    }
+
+    @Override
+    public void onActivityDestroyed(@NonNull Activity activity) {
+
+    }
 }
